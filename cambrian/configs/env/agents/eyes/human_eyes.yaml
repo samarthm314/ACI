@@ -26,4 +26,4 @@ single_eye:
 
   # integration_factor: Motion blur/temporal smoothing (0 = none, 0.6 = moderate, 0.9 = heavy)
   # Higher values = more motion blur when moving, encourages fixation
-  integration_factor: 0.6
+  integration_factor: 0.5
