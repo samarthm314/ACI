@@ -16,7 +16,7 @@ outputs/
 *.npy
 *.mp4
 *.gif
-*.webp
+#*.webp
 screenshot.png
 
 # Mujoco
