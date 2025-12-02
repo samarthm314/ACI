@@ -1,0 +1,1705 @@
+config: null
+custom:
+  frequency: 8
+logdir: logs/2025-12-01/exp_tracking_human
+expdir: &id001 logs/2025-12-01/exp_tracking_human
+expsubdir: .
+expname: exp_tracking_human
+seed: 0
+trainer:
+  config: null
+  custom: {}
+  total_timesteps: 500000
+  max_episode_steps: 256
+  n_envs: 32
+  model:
+    policy_kwargs:
+      features_extractor_class:
+        _target_: cambrian.ml.features_extractors.MjCambrianCombinedExtractor
+        _partial_: true
+      features_extractor_kwargs:
+        normalized_image: true
+        image_extractor:
+          _target_: cambrian.ml.features_extractors.MjCambrianMLPExtractor
+          _partial_: true
+          features_dim: 16
+          activation:
+            _target_: torch.nn.Tanh
+            _partial_: true
+          architecture:
+          - 4
+          - 8
+        share_image_extractor: true
+      net_arch:
+        pi:
+        - 64
+        - 64
+        vf:
+        - 64
+        - 64
+    _target_: cambrian.ml.model.MjCambrianModel
+    _partial_: true
+    _convert_: all
+    policy: MultiInputPolicy
+    n_steps: 2048
+    batch_size: 2048
+    learning_rate: 0.001
+  callbacks:
+    eval_callback:
+      _target_: cambrian.ml.callbacks.MjCambrianEvalCallback
+      _partial_: true
+      eval_env: "???"
+      n_eval_episodes: 6
+      best_model_save_path: *id001
+      log_path: *id001
+      deterministic: true
+      render: true
+      eval_freq: 10000
+      verbose: 0
+      callback_after_eval:
+        _target_: cambrian.ml.callbacks.MjCambrianCallbackListWithSharedParent
+        _convert_: all
+        callbacks:
+          stop_training_on_no_improvement_callback:
+            _target_: stable_baselines3.common.callbacks.StopTrainingOnNoModelImprovement
+            max_no_improvement_evals: 3
+            min_evals: 0
+          stop_training_on_reward_threshold_callback:
+            _target_: stable_baselines3.common.callbacks.StopTrainingOnRewardThreshold
+            reward_threshold: 1000.0
+          plot_monitor_callback:
+            _target_: cambrian.ml.callbacks.MjCambrianPlotMonitorCallback
+            logdir: *id001
+            filename: monitor
+          plot_evaluations_callback:
+            _target_: cambrian.ml.callbacks.MjCambrianPlotMonitorCallback
+            logdir: *id001
+            filename: eval_monitor
+            n_episodes: 6
+    progress_bar_callback:
+      _target_: cambrian.ml.callbacks.MjCambrianProgressBarCallback
+  wrappers:
+    agent_env_wrapper:
+      _target_: cambrian.utils.wrappers.MjCambrianSingleAgentEnvWrapper
+      _partial_: true
+    torch_to_numpy_wrapper:
+      _target_: cambrian.utils.wrappers.MjCambrianTorchToNumpyWrapper
+      _partial_: true
+    frame_stack_wrapper:
+      _target_: gymnasium.wrappers.FrameStackObservation
+      _partial_: true
+      stack_size: 10
+      padding_type: zero
+    constant_action_wrapper:
+      _target_: cambrian.utils.wrappers.MjCambrianConstantActionWrapper
+      _partial_: true
+      constant_actions: {}
+  prune_fn: null
+  fitness_fn:
+    _target_: cambrian.ml.fitness_fns.fitness_from_monitor
+    _partial_: true
+    monitor_csv: logs/2025-12-01/exp_tracking_human/eval_monitor.csv
+    n_episodes: 6
+evo: null
+env:
+  config: null
+  custom: {}
+  instance:
+    _target_: cambrian.envs.MjCambrianMazeEnv
+    _partial_: true
+  xml:
+    _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+    _convert_: all
+    xml_string: |
+      <mujoco model="scene">
+          <include file="cambrian/models/settings.xml" />
+          <option integrator="implicitfast" timestep="0.02">
+              <flag frictionloss="disable" />
+          </option>
+          <visual>
+              <headlight active="0" />
+              <map znear="0.0001" zfar="3" />
+              <scale frustum="20" />
+              <rgba camera="0.6 0.9 0.6 1" />
+              <quality offsamples="0"/>
+          </visual>
+          <worldbody></worldbody>
+      </mujoco>
+  step_fn:
+    _target_: cambrian.envs.step_fns.step_combined
+    _partial_: true
+    step_add_agent_qpos_to_info:
+      _target_: cambrian.envs.step_fns.step_add_agent_qpos_to_info
+      _partial_: true
+  termination_fn:
+    terminate_if_close_to_goal:
+      _target_: cambrian.envs.done_fns.done_if_close_to_agents
+      _partial_: true
+      for_agents:
+      - agent
+      to_agents:
+      - goal0
+      distance_threshold: 1.0
+    _target_: cambrian.envs.done_fns.done_combined
+    _partial_: true
+    terminate_if_exceeds_max_episode_steps:
+      _target_: cambrian.envs.done_fns.done_if_exceeds_max_episode_steps
+      _partial_: true
+  truncation_fn:
+    truncate_if_close_to_adversary:
+      _target_: cambrian.envs.done_fns.done_if_close_to_agents
+      _partial_: true
+      for_agents:
+      - agent
+      to_agents:
+      - adversary0
+      distance_threshold: 1.0
+    _target_: cambrian.envs.done_fns.done_combined
+    _partial_: true
+  reward_fn:
+    reward_if_done:
+      _target_: cambrian.envs.reward_fns.reward_fn_done
+      _partial_: true
+      scale_by_quickness: true
+      termination_reward: 1.0
+      truncation_reward: -1.0
+      disable_on_max_episode_steps: true
+      for_agents:
+      - agent
+    penalize_if_has_contacts:
+      _target_: cambrian.envs.reward_fns.reward_fn_has_contacts
+      _partial_: true
+      reward: -1.0
+      for_agents:
+      - agent
+    _target_: cambrian.envs.reward_fns.reward_combined
+    _partial_: true
+  frame_skip: 10
+  max_episode_steps: 256
+  n_eval_episodes: 1
+  add_overlays: true
+  clear_overlays_on_reset: true
+  debug_overlays_size: 0.35
+  renderer:
+    config: null
+    custom: {}
+    render_modes:
+    - rgb_array
+    width: null
+    height: null
+    fullscreen: null
+    scene:
+      _target_: hydra_config.utils.instance_wrapper
+      instance:
+        _target_: mujoco.MjvScene
+        _partial_: true
+        maxgeom: 10000
+      flags:
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 0
+      - 1
+    scene_options:
+      _target_: hydra_config.utils.instance_wrapper
+      instance:
+        _target_: mujoco.MjvOption
+      flags:
+        _target_: hydra_config.utils.instance_wrapper
+        instance:
+          _target_: mujoco.MjvOption
+        key: flags
+        setitem: true
+        locate: true
+        mujoco.mjtVisFlag.mjVIS_CAMERA: 1
+      geomgroup:
+        _target_: hydra_config.utils.instance_wrapper
+        instance:
+          _target_: mujoco.MjvOption
+        key: geomgroup
+        setitem: true
+        eval: true
+        slice(None): true
+      sitegroup:
+        _target_: hydra_config.utils.instance_wrapper
+        instance:
+          _target_: mujoco.MjvOption
+        key: geomgroup
+        setitem: true
+        eval: true
+        slice(None): true
+    camera:
+      _target_: hydra_config.utils.instance_wrapper
+      instance:
+        _target_: mujoco.MjvCamera
+      azimuth: 180.0
+      elevation: -90.0
+      distance: 1.25
+    use_shared_context: true
+    save_mode: &id002 WEBP
+  save_filename: null
+  agents:
+    agent:
+      config: null
+      custom: {}
+      instance:
+        _target_: cambrian.agents.MjCambrianAgentPoint
+        _partial_: true
+        _convert_: all
+      trainable: true
+      use_privileged_action: false
+      overlay_color:
+      - 0.0
+      - 1.0
+      - 1.0
+      - 1.0
+      overlay_size: 0.1
+      xml:
+        _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+        _convert_: all
+        xml_string: |
+          <mujoco>
+            <include file="cambrian/models/agents/agent.xml" />
+            <asset>
+              <material name="agent_mat" emission="1" rgba="0.3 0.6 0.3 1" />
+              <material name="agent_direction_mat" emission="1" rgba="0.6 0.3 0.3 1" />
+            </asset>
+            <worldbody>
+              <body name="agent_body" pos="0 0 0.2">
+                <!-- Make the alpha very small so it's almost invisible but still visible to mj_ray -->
+                <geom name="agent_geom" type="sphere" size="0.2" rgba="0.0 0.0 1.0 0.01"
+                  contype="1" friction=".5 .1 .1" density="1000" margin="0.002" condim="1" conaffinity="1" group="2" />
+                <site name="agent_site" pos="0.0 0.0 0.0" material="agent_mat"
+                  size="0.2" />
+                <site name="agent_direction_site" group="2" pos="0.3 0.0 0.0"
+                  quat="0.5 0.5 0.5 0.5" type="cylinder" material="agent_direction_mat"
+                  rgba="1.0 0.0 0.0 1.0" size="0.05 0.15" />
+
+                <inertial pos="0 0 0" mass="1" diaginertia="0.1 0.1 0.1" />
+
+                <joint name="agent_joint_x" type="slide" pos="0 0 0" axis="1 0 0" damping="1"
+                  limited="false" />
+                <joint name="agent_joint_y" type="slide" pos="0 0 0" axis="0 1 0" damping="1"
+                  limited="false" />
+                <joint name="agent_joint_yaw" type="hinge" pos="0 0 0" axis="0 0 1" damping="1"
+                  limited="false" />
+              </body>
+            </worldbody>
+            <actuator>
+              <!-- These are just dummy actuators for providing ranges -->
+              <velocity name="agent_act_x" joint="agent_joint_x" ctrlrange="-10.0 10.0"
+                ctrllimited="true" kv="100" />
+              <velocity name="agent_act_y" joint="agent_joint_y" ctrlrange="-10.0 10.0"
+                ctrllimited="true" kv="100" />
+              <position name="agent_act_yaw" joint="agent_joint_yaw" ctrlrange="-3.14 3.14"
+                ctrllimited="true" gear="1" />
+            </actuator>
+          </mujoco>
+      body_name: agent_body
+      geom_name: agent_geom
+      check_contacts: true
+      init_pos:
+      - null
+      - null
+      - null
+      init_quat:
+      - null
+      - null
+      - null
+      - null
+      perturb_init_pos: true
+      use_action_obs: true
+      use_contact_obs: true
+      eyes:
+        eye:
+          config: null
+          custom: {}
+          instance:
+            _target_: cambrian.eyes.multi_eye.MjCambrianMultiEye
+            _partial_: true
+          fov:
+          - 90.0
+          - 120.0
+          focal:
+          - 0.01
+          - 0.01
+          sensorsize:
+          - 0.008284271247461901
+          - 0.008284271247461901
+          resolution:
+          - 32
+          - 32
+          coord:
+          - 0.0
+          - 0.0
+          orthographic: false
+          noise_std: 0.0
+          integration_factor: 0.3
+          renderer:
+            config: null
+            custom: {}
+            render_modes:
+            - rgb_array
+            width: 32
+            height: 32
+            fullscreen: null
+            scene:
+              _target_: hydra_config.utils.instance_wrapper
+              instance:
+                _target_: mujoco.MjvScene
+                _partial_: true
+                maxgeom: 10000
+              flags:
+              - 0
+              - 0
+              - 0
+              - 0
+              - 0
+              - 0
+              - 0
+              - 0
+              - 0
+              - 1
+            scene_options:
+              _target_: hydra_config.utils.instance_wrapper
+              instance:
+                _target_: mujoco.MjvOption
+              flags:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvOption
+                key: flags
+                setitem: true
+                locate: true
+                mujoco.mjtVisFlag.mjVIS_CAMERA: 0
+              geomgroup:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvOption
+                key: geomgroup
+                setitem: true
+                eval: true
+                slice(None): true
+                '2': false
+              sitegroup:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvOption
+                key: geomgroup
+                setitem: true
+                eval: true
+                slice(None): true
+                '2': false
+            camera:
+              _target_: hydra_config.utils.instance_wrapper
+              instance:
+                _target_: mujoco.MjvCamera
+            use_shared_context: true
+            save_mode: *id002
+          single_eye:
+            config: null
+            custom: {}
+            instance:
+              _target_: cambrian.eyes.eye.MjCambrianEye
+              _partial_: true
+            fov:
+            - 45.0
+            - 45.0
+            focal:
+            - 0.01
+            - 0.01
+            sensorsize:
+            - 0.008284271247461901
+            - 0.008284271247461901
+            resolution:
+            - 1
+            - 1
+            coord:
+            - 0.0
+            - 0.0
+            orthographic: false
+            noise_std: 0.02
+            integration_factor: 0.6
+            renderer:
+              config: null
+              custom: {}
+              render_modes:
+              - rgb_array
+              width: 1
+              height: 1
+              fullscreen: null
+              scene:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvScene
+                  _partial_: true
+                  maxgeom: 10000
+                flags:
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 1
+              scene_options:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvOption
+                flags:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvOption
+                  key: flags
+                  setitem: true
+                  locate: true
+                  mujoco.mjtVisFlag.mjVIS_CAMERA: 0
+                geomgroup:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvOption
+                  key: geomgroup
+                  setitem: true
+                  eval: true
+                  slice(None): true
+                  '2': false
+                sitegroup:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvOption
+                  key: geomgroup
+                  setitem: true
+                  eval: true
+                  slice(None): true
+                  '2': false
+              camera:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvCamera
+              use_shared_context: true
+              save_mode: *id002
+          _single_eye:
+            _target_: hydra_config.utils.merge_with_kwargs
+            _recursive_: false
+            config:
+              config: null
+              custom: {}
+              instance:
+                _target_: cambrian.eyes.eye.MjCambrianEye
+                _partial_: true
+              fov:
+              - 45.0
+              - 45.0
+              focal:
+              - 0.01
+              - 0.01
+              sensorsize:
+              - 0.008284271247461901
+              - 0.008284271247461901
+              resolution:
+              - 1
+              - 1
+              coord:
+              - 0.0
+              - 0.0
+              orthographic: false
+              noise_std: 0.02
+              integration_factor: 0.6
+              renderer:
+                config: null
+                custom: {}
+                render_modes:
+                - rgb_array
+                width: 1
+                height: 1
+                fullscreen: null
+                scene:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvScene
+                    _partial_: true
+                    maxgeom: 10000
+                  flags:
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 1
+                scene_options:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvOption
+                  flags:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvOption
+                    key: flags
+                    setitem: true
+                    locate: true
+                    mujoco.mjtVisFlag.mjVIS_CAMERA: 0
+                  geomgroup:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvOption
+                    key: geomgroup
+                    setitem: true
+                    eval: true
+                    slice(None): true
+                    '2': false
+                  sitegroup:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvOption
+                    key: geomgroup
+                    setitem: true
+                    eval: true
+                    slice(None): true
+                    '2': false
+                camera:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvCamera
+                use_shared_context: true
+                save_mode: *id002
+            fov:
+            - 90.0
+            - 120.0
+            focal:
+            - 0.01
+            - 0.01
+            sensorsize:
+            - 0.008284271247461901
+            - 0.008284271247461901
+            resolution:
+            - 32
+            - 32
+            coord:
+            - 0.0
+            - 0.0
+            orthographic: false
+            noise_std: 0.02
+            integration_factor: 0.6
+            renderer:
+              width: 32
+              height: 32
+          lat_range:
+          - 0.0
+          - 0.0
+          lon_range:
+          - -15.0
+          - 15.0
+          num_eyes:
+          - 1
+          - 2
+          flatten_observations: false
+    goal0:
+      config: null
+      custom:
+        size: 0.5
+        top_size: 0.25
+        rgba: 0.2 0.8 0.2 1.0
+        top_rgba: 0.2 0.8 0.2 1.0
+        frequency: 8
+        euler: 0 0 0
+        texture_cmap: redblue
+        texture: object_textures/redblue_vertical_8.png
+      instance:
+        _target_: cambrian.agents.point.MjCambrianAgentPointSeeker
+        _partial_: true
+        _convert_: all
+        speed: -0.9
+        target: null
+      trainable: false
+      use_privileged_action: true
+      overlay_color:
+      - 0.2
+      - 0.8
+      - 0.2
+      - 1.0
+      overlay_size: 0.1
+      xml:
+        _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+        _convert_: all
+        xml_string: |
+          <mujoco>
+            <include file="cambrian/models/agents/agent.xml" />
+            <asset>
+              <material name="goal0_mat" emission="1" rgba="0.3 0.6 0.3 1" />
+              <material name="goal0_direction_mat" emission="1" rgba="0.6 0.3 0.3 1" />
+            </asset>
+            <worldbody>
+              <body name="goal0_body" pos="0 0 0.2">
+                <!-- Make the alpha very small so it's almost invisible but still visible to mj_ray -->
+                <geom name="goal0_geom" type="sphere" size="0.2" rgba="0.0 0.0 1.0 0.01"
+                  contype="1" friction=".5 .1 .1" density="1000" margin="0.002" condim="1" conaffinity="1" group="2" />
+                <site name="goal0_site" pos="0.0 0.0 0.0" material="goal0_mat"
+                  size="0.2" />
+                <site name="goal0_direction_site" group="2" pos="0.3 0.0 0.0"
+                  quat="0.5 0.5 0.5 0.5" type="cylinder" material="goal0_direction_mat"
+                  rgba="1.0 0.0 0.0 1.0" size="0.05 0.15" />
+
+                <inertial pos="0 0 0" mass="1" diaginertia="0.1 0.1 0.1" />
+
+                <joint name="goal0_joint_x" type="slide" pos="0 0 0" axis="1 0 0" damping="1"
+                  limited="false" />
+                <joint name="goal0_joint_y" type="slide" pos="0 0 0" axis="0 1 0" damping="1"
+                  limited="false" />
+                <joint name="goal0_joint_yaw" type="hinge" pos="0 0 0" axis="0 0 1" damping="1"
+                  limited="false" />
+              </body>
+            </worldbody>
+            <actuator>
+              <!-- These are just dummy actuators for providing ranges -->
+              <velocity name="goal0_act_x" joint="goal0_joint_x" ctrlrange="-10.0 10.0"
+                ctrllimited="true" kv="100" />
+              <velocity name="goal0_act_y" joint="goal0_joint_y" ctrlrange="-10.0 10.0"
+                ctrllimited="true" kv="100" />
+              <position name="goal0_act_yaw" joint="goal0_joint_yaw" ctrlrange="-3.14 3.14"
+                ctrllimited="true" gear="1" />
+            </actuator>
+          </mujoco>
+        overrides:
+        - mujoco:
+          - worldbody:
+            - body:
+              - name: goal0_body
+              - pos: 0 0 0.5
+              - site:
+                - name: goal0_site
+                - size: '0.5'
+                - euler: 0 0 0
+              - site:
+                - name: goal0_top_site
+                - material: goal0_top_mat
+                - pos: 0 0 0.5
+                - size: '0.2'
+                - group: '2'
+          - asset:
+            - texture:
+              - name: goal0_tex
+              - file: object_textures/redblue_vertical_8.png
+              - type: 2d
+            - material:
+              - name: goal0_mat
+              - texture: goal0_tex
+              - emission: '2'
+              - rgba: 1 1 1 1
+            - material:
+              - name: goal0_top_mat
+              - emission: '2'
+              - rgba: 0.2 0.8 0.2 1.0
+      body_name: goal0_body
+      geom_name: goal0_geom
+      check_contacts: false
+      init_pos:
+      - null
+      - null
+      - null
+      init_quat:
+      - null
+      - null
+      - null
+      - null
+      perturb_init_pos: true
+      use_action_obs: false
+      use_contact_obs: false
+      eyes: {}
+    adversary0:
+      config: null
+      custom:
+        size: 0.5
+        top_size: 0.25
+        rgba: 0.2 0.8 0.2 1.0
+        top_rgba: 0.8 0.2 0.2 1.0
+        frequency: 8
+        euler: 0 90 0
+        texture_cmap: redblue
+        texture: object_textures/redblue_vertical_8.png
+      instance:
+        _target_: cambrian.agents.point.MjCambrianAgentPointSeeker
+        _partial_: true
+        _convert_: all
+        speed: -0.9
+        target: null
+      trainable: false
+      use_privileged_action: true
+      overlay_color:
+      - 0.8
+      - 0.2
+      - 0.2
+      - 1.0
+      overlay_size: 0.1
+      xml:
+        _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+        _convert_: all
+        xml_string: |
+          <mujoco>
+            <include file="cambrian/models/agents/agent.xml" />
+            <asset>
+              <material name="adversary0_mat" emission="1" rgba="0.3 0.6 0.3 1" />
+              <material name="adversary0_direction_mat" emission="1" rgba="0.6 0.3 0.3 1" />
+            </asset>
+            <worldbody>
+              <body name="adversary0_body" pos="0 0 0.2">
+                <!-- Make the alpha very small so it's almost invisible but still visible to mj_ray -->
+                <geom name="adversary0_geom" type="sphere" size="0.2" rgba="0.0 0.0 1.0 0.01"
+                  contype="1" friction=".5 .1 .1" density="1000" margin="0.002" condim="1" conaffinity="1" group="2" />
+                <site name="adversary0_site" pos="0.0 0.0 0.0" material="adversary0_mat"
+                  size="0.2" />
+                <site name="adversary0_direction_site" group="2" pos="0.3 0.0 0.0"
+                  quat="0.5 0.5 0.5 0.5" type="cylinder" material="adversary0_direction_mat"
+                  rgba="1.0 0.0 0.0 1.0" size="0.05 0.15" />
+
+                <inertial pos="0 0 0" mass="1" diaginertia="0.1 0.1 0.1" />
+
+                <joint name="adversary0_joint_x" type="slide" pos="0 0 0" axis="1 0 0" damping="1"
+                  limited="false" />
+                <joint name="adversary0_joint_y" type="slide" pos="0 0 0" axis="0 1 0" damping="1"
+                  limited="false" />
+                <joint name="adversary0_joint_yaw" type="hinge" pos="0 0 0" axis="0 0 1" damping="1"
+                  limited="false" />
+              </body>
+            </worldbody>
+            <actuator>
+              <!-- These are just dummy actuators for providing ranges -->
+              <velocity name="adversary0_act_x" joint="adversary0_joint_x" ctrlrange="-10.0 10.0"
+                ctrllimited="true" kv="100" />
+              <velocity name="adversary0_act_y" joint="adversary0_joint_y" ctrlrange="-10.0 10.0"
+                ctrllimited="true" kv="100" />
+              <position name="adversary0_act_yaw" joint="adversary0_joint_yaw" ctrlrange="-3.14 3.14"
+                ctrllimited="true" gear="1" />
+            </actuator>
+          </mujoco>
+        overrides:
+        - mujoco:
+          - worldbody:
+            - body:
+              - name: adversary0_body
+              - pos: 0 0 0.5
+              - site:
+                - name: adversary0_site
+                - size: '0.5'
+                - euler: 0 90 0
+              - site:
+                - name: adversary0_top_site
+                - material: adversary0_top_mat
+                - pos: 0 0 0.5
+                - size: '0.2'
+                - group: '2'
+          - asset:
+            - texture:
+              - name: adversary0_tex
+              - file: object_textures/redblue_vertical_8.png
+              - type: 2d
+            - material:
+              - name: adversary0_mat
+              - texture: adversary0_tex
+              - emission: '2'
+              - rgba: 1 1 1 1
+            - material:
+              - name: adversary0_top_mat
+              - emission: '2'
+              - rgba: 0.8 0.2 0.2 1.0
+      body_name: adversary0_body
+      geom_name: adversary0_geom
+      check_contacts: false
+      init_pos:
+      - null
+      - null
+      - null
+      init_quat:
+      - null
+      - null
+      - null
+      - null
+      perturb_init_pos: true
+      use_action_obs: false
+      use_contact_obs: false
+      eyes: {}
+  mazes:
+    maze:
+      config: null
+      custom: {}
+      xml:
+        _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+        _convert_: all
+        xml_string: |
+          <mujoco name="maze">
+              <asset>
+                  <material name="floor_mat_maze" rgba="0.1 0.1 0.1 1.0" shininess="0.0" specular="0.0" />
+              </asset>
+              <default>
+                  <default class="maze_wall_maze">
+                      <geom type="box" gap="0.05" margin="0.1" group="3" condim="1" />
+                  </default>
+              </default>
+              <worldbody>
+                  <geom name="floor_maze" type="plane" pos="0 0 -0.05" size="0 0 0" material="floor_mat_maze"
+                      condim="1" group="1" />
+              </worldbody>
+          </mujoco>
+      map: |-
+        [
+          [1, 1,   1,   1,   1,   1,   1, 1, 1],
+          [1, 0,   R,   R,   R,   R,   R, 0, 1],
+          [1, R,   0,   0,   0,   0,   0, R, 1],
+          [1, R, R:O, R:O, R:O, R:O, R:O, R, 1],
+          [1, R, R:O, R:O,   R, R:O, R:O, R, 1],
+          [1, R, R:O, R:O, R:O, R:O, R:O, R, 1],
+          [1, R, R:O, R:O,   R, R:O, R:O, R, 1],
+          [1, R, R:O, R:O, R:O, R:O, R:O, R, 1],
+          [1, R,   0,   0,   0,   0,   0, R, 1],
+          [1, 0,   R,   R,   R,   R,   R, 0, 1],
+          [1, 1,   1,   1,   1,   1,   1, 1, 1],
+        ]
+      scale: 2.0
+      height: 0.5
+      hflip: false
+      vflip: false
+      rotation: 0.0
+      wall_texture_map:
+        default:
+        - vertical_10
+      agent_id_map:
+        default:
+        - agent
+        O:
+        - goal0
+        - adversary0
+      enabled: true
+  maze_selection_fn:
+    _target_: cambrian.envs.maze_env.MjCambrianMazeStore.select_maze_cycle
+    _partial_: true
+eval_env:
+  _target_: hydra_config.utils.merge_with_kwargs
+  _recursive_: false
+  config:
+    config: null
+    custom: {}
+    instance:
+      _target_: cambrian.envs.MjCambrianMazeEnv
+      _partial_: true
+    xml:
+      _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+      _convert_: all
+      xml_string: |
+        <mujoco model="scene">
+            <include file="cambrian/models/settings.xml" />
+            <option integrator="implicitfast" timestep="0.02">
+                <flag frictionloss="disable" />
+            </option>
+            <visual>
+                <headlight active="0" />
+                <map znear="0.0001" zfar="3" />
+                <scale frustum="20" />
+                <rgba camera="0.6 0.9 0.6 1" />
+                <quality offsamples="0"/>
+            </visual>
+            <worldbody></worldbody>
+        </mujoco>
+    step_fn:
+      _target_: cambrian.envs.step_fns.step_combined
+      _partial_: true
+      step_add_agent_qpos_to_info:
+        _target_: cambrian.envs.step_fns.step_add_agent_qpos_to_info
+        _partial_: true
+    termination_fn:
+      terminate_if_close_to_goal:
+        _target_: cambrian.envs.done_fns.done_if_close_to_agents
+        _partial_: true
+        for_agents:
+        - agent
+        to_agents:
+        - goal0
+        distance_threshold: 1.0
+      _target_: cambrian.envs.done_fns.done_combined
+      _partial_: true
+      terminate_if_exceeds_max_episode_steps:
+        _target_: cambrian.envs.done_fns.done_if_exceeds_max_episode_steps
+        _partial_: true
+    truncation_fn:
+      truncate_if_close_to_adversary:
+        _target_: cambrian.envs.done_fns.done_if_close_to_agents
+        _partial_: true
+        for_agents:
+        - agent
+        to_agents:
+        - adversary0
+        distance_threshold: 1.0
+      _target_: cambrian.envs.done_fns.done_combined
+      _partial_: true
+    reward_fn:
+      reward_if_done:
+        _target_: cambrian.envs.reward_fns.reward_fn_done
+        _partial_: true
+        scale_by_quickness: true
+        termination_reward: 1.0
+        truncation_reward: -1.0
+        disable_on_max_episode_steps: true
+        for_agents:
+        - agent
+      penalize_if_has_contacts:
+        _target_: cambrian.envs.reward_fns.reward_fn_has_contacts
+        _partial_: true
+        reward: -1.0
+        for_agents:
+        - agent
+      _target_: cambrian.envs.reward_fns.reward_combined
+      _partial_: true
+    frame_skip: 10
+    max_episode_steps: 256
+    n_eval_episodes: 1
+    add_overlays: true
+    clear_overlays_on_reset: true
+    debug_overlays_size: 0.35
+    renderer:
+      config: null
+      custom: {}
+      render_modes:
+      - rgb_array
+      width: null
+      height: null
+      fullscreen: null
+      scene:
+        _target_: hydra_config.utils.instance_wrapper
+        instance:
+          _target_: mujoco.MjvScene
+          _partial_: true
+          maxgeom: 10000
+        flags:
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 0
+        - 1
+      scene_options:
+        _target_: hydra_config.utils.instance_wrapper
+        instance:
+          _target_: mujoco.MjvOption
+        flags:
+          _target_: hydra_config.utils.instance_wrapper
+          instance:
+            _target_: mujoco.MjvOption
+          key: flags
+          setitem: true
+          locate: true
+          mujoco.mjtVisFlag.mjVIS_CAMERA: 1
+        geomgroup:
+          _target_: hydra_config.utils.instance_wrapper
+          instance:
+            _target_: mujoco.MjvOption
+          key: geomgroup
+          setitem: true
+          eval: true
+          slice(None): true
+        sitegroup:
+          _target_: hydra_config.utils.instance_wrapper
+          instance:
+            _target_: mujoco.MjvOption
+          key: geomgroup
+          setitem: true
+          eval: true
+          slice(None): true
+      camera:
+        _target_: hydra_config.utils.instance_wrapper
+        instance:
+          _target_: mujoco.MjvCamera
+        azimuth: 180.0
+        elevation: -90.0
+        distance: 1.25
+      use_shared_context: true
+      save_mode: *id002
+    save_filename: null
+    agents:
+      agent:
+        config: null
+        custom: {}
+        instance:
+          _target_: cambrian.agents.MjCambrianAgentPoint
+          _partial_: true
+          _convert_: all
+        trainable: true
+        use_privileged_action: false
+        overlay_color:
+        - 0.0
+        - 1.0
+        - 1.0
+        - 1.0
+        overlay_size: 0.1
+        xml:
+          _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+          _convert_: all
+          xml_string: |
+            <mujoco>
+              <include file="cambrian/models/agents/agent.xml" />
+              <asset>
+                <material name="agent_mat" emission="1" rgba="0.3 0.6 0.3 1" />
+                <material name="agent_direction_mat" emission="1" rgba="0.6 0.3 0.3 1" />
+              </asset>
+              <worldbody>
+                <body name="agent_body" pos="0 0 0.2">
+                  <!-- Make the alpha very small so it's almost invisible but still visible to mj_ray -->
+                  <geom name="agent_geom" type="sphere" size="0.2" rgba="0.0 0.0 1.0 0.01"
+                    contype="1" friction=".5 .1 .1" density="1000" margin="0.002" condim="1" conaffinity="1" group="2" />
+                  <site name="agent_site" pos="0.0 0.0 0.0" material="agent_mat"
+                    size="0.2" />
+                  <site name="agent_direction_site" group="2" pos="0.3 0.0 0.0"
+                    quat="0.5 0.5 0.5 0.5" type="cylinder" material="agent_direction_mat"
+                    rgba="1.0 0.0 0.0 1.0" size="0.05 0.15" />
+
+                  <inertial pos="0 0 0" mass="1" diaginertia="0.1 0.1 0.1" />
+
+                  <joint name="agent_joint_x" type="slide" pos="0 0 0" axis="1 0 0" damping="1"
+                    limited="false" />
+                  <joint name="agent_joint_y" type="slide" pos="0 0 0" axis="0 1 0" damping="1"
+                    limited="false" />
+                  <joint name="agent_joint_yaw" type="hinge" pos="0 0 0" axis="0 0 1" damping="1"
+                    limited="false" />
+                </body>
+              </worldbody>
+              <actuator>
+                <!-- These are just dummy actuators for providing ranges -->
+                <velocity name="agent_act_x" joint="agent_joint_x" ctrlrange="-10.0 10.0"
+                  ctrllimited="true" kv="100" />
+                <velocity name="agent_act_y" joint="agent_joint_y" ctrlrange="-10.0 10.0"
+                  ctrllimited="true" kv="100" />
+                <position name="agent_act_yaw" joint="agent_joint_yaw" ctrlrange="-3.14 3.14"
+                  ctrllimited="true" gear="1" />
+              </actuator>
+            </mujoco>
+        body_name: agent_body
+        geom_name: agent_geom
+        check_contacts: true
+        init_pos:
+        - null
+        - null
+        - null
+        init_quat:
+        - null
+        - null
+        - null
+        - null
+        perturb_init_pos: true
+        use_action_obs: true
+        use_contact_obs: true
+        eyes:
+          eye:
+            config: null
+            custom: {}
+            instance:
+              _target_: cambrian.eyes.multi_eye.MjCambrianMultiEye
+              _partial_: true
+            fov:
+            - 90.0
+            - 120.0
+            focal:
+            - 0.01
+            - 0.01
+            sensorsize:
+            - 0.008284271247461901
+            - 0.008284271247461901
+            resolution:
+            - 32
+            - 32
+            coord:
+            - 0.0
+            - 0.0
+            orthographic: false
+            noise_std: 0.0
+            integration_factor: 0.3
+            renderer:
+              config: null
+              custom: {}
+              render_modes:
+              - rgb_array
+              width: 32
+              height: 32
+              fullscreen: null
+              scene:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvScene
+                  _partial_: true
+                  maxgeom: 10000
+                flags:
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 0
+                - 1
+              scene_options:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvOption
+                flags:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvOption
+                  key: flags
+                  setitem: true
+                  locate: true
+                  mujoco.mjtVisFlag.mjVIS_CAMERA: 0
+                geomgroup:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvOption
+                  key: geomgroup
+                  setitem: true
+                  eval: true
+                  slice(None): true
+                  '2': false
+                sitegroup:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvOption
+                  key: geomgroup
+                  setitem: true
+                  eval: true
+                  slice(None): true
+                  '2': false
+              camera:
+                _target_: hydra_config.utils.instance_wrapper
+                instance:
+                  _target_: mujoco.MjvCamera
+              use_shared_context: true
+              save_mode: *id002
+            single_eye:
+              config: null
+              custom: {}
+              instance:
+                _target_: cambrian.eyes.eye.MjCambrianEye
+                _partial_: true
+              fov:
+              - 45.0
+              - 45.0
+              focal:
+              - 0.01
+              - 0.01
+              sensorsize:
+              - 0.008284271247461901
+              - 0.008284271247461901
+              resolution:
+              - 1
+              - 1
+              coord:
+              - 0.0
+              - 0.0
+              orthographic: false
+              noise_std: 0.02
+              integration_factor: 0.6
+              renderer:
+                config: null
+                custom: {}
+                render_modes:
+                - rgb_array
+                width: 1
+                height: 1
+                fullscreen: null
+                scene:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvScene
+                    _partial_: true
+                    maxgeom: 10000
+                  flags:
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 0
+                  - 1
+                scene_options:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvOption
+                  flags:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvOption
+                    key: flags
+                    setitem: true
+                    locate: true
+                    mujoco.mjtVisFlag.mjVIS_CAMERA: 0
+                  geomgroup:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvOption
+                    key: geomgroup
+                    setitem: true
+                    eval: true
+                    slice(None): true
+                    '2': false
+                  sitegroup:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvOption
+                    key: geomgroup
+                    setitem: true
+                    eval: true
+                    slice(None): true
+                    '2': false
+                camera:
+                  _target_: hydra_config.utils.instance_wrapper
+                  instance:
+                    _target_: mujoco.MjvCamera
+                use_shared_context: true
+                save_mode: *id002
+            _single_eye:
+              _target_: hydra_config.utils.merge_with_kwargs
+              _recursive_: false
+              config:
+                config: null
+                custom: {}
+                instance:
+                  _target_: cambrian.eyes.eye.MjCambrianEye
+                  _partial_: true
+                fov:
+                - 45.0
+                - 45.0
+                focal:
+                - 0.01
+                - 0.01
+                sensorsize:
+                - 0.008284271247461901
+                - 0.008284271247461901
+                resolution:
+                - 1
+                - 1
+                coord:
+                - 0.0
+                - 0.0
+                orthographic: false
+                noise_std: 0.02
+                integration_factor: 0.6
+                renderer:
+                  config: null
+                  custom: {}
+                  render_modes:
+                  - rgb_array
+                  width: 1
+                  height: 1
+                  fullscreen: null
+                  scene:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvScene
+                      _partial_: true
+                      maxgeom: 10000
+                    flags:
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 0
+                    - 1
+                  scene_options:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvOption
+                    flags:
+                      _target_: hydra_config.utils.instance_wrapper
+                      instance:
+                        _target_: mujoco.MjvOption
+                      key: flags
+                      setitem: true
+                      locate: true
+                      mujoco.mjtVisFlag.mjVIS_CAMERA: 0
+                    geomgroup:
+                      _target_: hydra_config.utils.instance_wrapper
+                      instance:
+                        _target_: mujoco.MjvOption
+                      key: geomgroup
+                      setitem: true
+                      eval: true
+                      slice(None): true
+                      '2': false
+                    sitegroup:
+                      _target_: hydra_config.utils.instance_wrapper
+                      instance:
+                        _target_: mujoco.MjvOption
+                      key: geomgroup
+                      setitem: true
+                      eval: true
+                      slice(None): true
+                      '2': false
+                  camera:
+                    _target_: hydra_config.utils.instance_wrapper
+                    instance:
+                      _target_: mujoco.MjvCamera
+                  use_shared_context: true
+                  save_mode: *id002
+              fov:
+              - 90.0
+              - 120.0
+              focal:
+              - 0.01
+              - 0.01
+              sensorsize:
+              - 0.008284271247461901
+              - 0.008284271247461901
+              resolution:
+              - 32
+              - 32
+              coord:
+              - 0.0
+              - 0.0
+              orthographic: false
+              noise_std: 0.02
+              integration_factor: 0.6
+              renderer:
+                width: 32
+                height: 32
+            lat_range:
+            - 0.0
+            - 0.0
+            lon_range:
+            - -15.0
+            - 15.0
+            num_eyes:
+            - 1
+            - 2
+            flatten_observations: false
+      goal0:
+        config: null
+        custom:
+          size: 0.5
+          top_size: 0.25
+          rgba: 0.2 0.8 0.2 1.0
+          top_rgba: 0.2 0.8 0.2 1.0
+          frequency: 8
+          euler: 0 0 0
+          texture_cmap: redblue
+          texture: object_textures/redblue_vertical_8.png
+        instance:
+          _target_: cambrian.agents.point.MjCambrianAgentPointSeeker
+          _partial_: true
+          _convert_: all
+          speed: -0.9
+          target: null
+        trainable: false
+        use_privileged_action: true
+        overlay_color:
+        - 0.2
+        - 0.8
+        - 0.2
+        - 1.0
+        overlay_size: 0.1
+        xml:
+          _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+          _convert_: all
+          xml_string: |
+            <mujoco>
+              <include file="cambrian/models/agents/agent.xml" />
+              <asset>
+                <material name="goal0_mat" emission="1" rgba="0.3 0.6 0.3 1" />
+                <material name="goal0_direction_mat" emission="1" rgba="0.6 0.3 0.3 1" />
+              </asset>
+              <worldbody>
+                <body name="goal0_body" pos="0 0 0.2">
+                  <!-- Make the alpha very small so it's almost invisible but still visible to mj_ray -->
+                  <geom name="goal0_geom" type="sphere" size="0.2" rgba="0.0 0.0 1.0 0.01"
+                    contype="1" friction=".5 .1 .1" density="1000" margin="0.002" condim="1" conaffinity="1" group="2" />
+                  <site name="goal0_site" pos="0.0 0.0 0.0" material="goal0_mat"
+                    size="0.2" />
+                  <site name="goal0_direction_site" group="2" pos="0.3 0.0 0.0"
+                    quat="0.5 0.5 0.5 0.5" type="cylinder" material="goal0_direction_mat"
+                    rgba="1.0 0.0 0.0 1.0" size="0.05 0.15" />
+
+                  <inertial pos="0 0 0" mass="1" diaginertia="0.1 0.1 0.1" />
+
+                  <joint name="goal0_joint_x" type="slide" pos="0 0 0" axis="1 0 0" damping="1"
+                    limited="false" />
+                  <joint name="goal0_joint_y" type="slide" pos="0 0 0" axis="0 1 0" damping="1"
+                    limited="false" />
+                  <joint name="goal0_joint_yaw" type="hinge" pos="0 0 0" axis="0 0 1" damping="1"
+                    limited="false" />
+                </body>
+              </worldbody>
+              <actuator>
+                <!-- These are just dummy actuators for providing ranges -->
+                <velocity name="goal0_act_x" joint="goal0_joint_x" ctrlrange="-10.0 10.0"
+                  ctrllimited="true" kv="100" />
+                <velocity name="goal0_act_y" joint="goal0_joint_y" ctrlrange="-10.0 10.0"
+                  ctrllimited="true" kv="100" />
+                <position name="goal0_act_yaw" joint="goal0_joint_yaw" ctrlrange="-3.14 3.14"
+                  ctrllimited="true" gear="1" />
+              </actuator>
+            </mujoco>
+          overrides:
+          - mujoco:
+            - worldbody:
+              - body:
+                - name: goal0_body
+                - pos: 0 0 0.5
+                - site:
+                  - name: goal0_site
+                  - size: '0.5'
+                  - euler: 0 0 0
+                - site:
+                  - name: goal0_top_site
+                  - material: goal0_top_mat
+                  - pos: 0 0 0.5
+                  - size: '0.2'
+                  - group: '2'
+            - asset:
+              - texture:
+                - name: goal0_tex
+                - file: object_textures/redblue_vertical_8.png
+                - type: 2d
+              - material:
+                - name: goal0_mat
+                - texture: goal0_tex
+                - emission: '2'
+                - rgba: 1 1 1 1
+              - material:
+                - name: goal0_top_mat
+                - emission: '2'
+                - rgba: 0.2 0.8 0.2 1.0
+        body_name: goal0_body
+        geom_name: goal0_geom
+        check_contacts: false
+        init_pos:
+        - null
+        - null
+        - null
+        init_quat:
+        - null
+        - null
+        - null
+        - null
+        perturb_init_pos: true
+        use_action_obs: false
+        use_contact_obs: false
+        eyes: {}
+      adversary0:
+        config: null
+        custom:
+          size: 0.5
+          top_size: 0.25
+          rgba: 0.2 0.8 0.2 1.0
+          top_rgba: 0.8 0.2 0.2 1.0
+          frequency: 8
+          euler: 0 90 0
+          texture_cmap: redblue
+          texture: object_textures/redblue_vertical_8.png
+        instance:
+          _target_: cambrian.agents.point.MjCambrianAgentPointSeeker
+          _partial_: true
+          _convert_: all
+          speed: -0.9
+          target: null
+        trainable: false
+        use_privileged_action: true
+        overlay_color:
+        - 0.8
+        - 0.2
+        - 0.2
+        - 1.0
+        overlay_size: 0.1
+        xml:
+          _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+          _convert_: all
+          xml_string: |
+            <mujoco>
+              <include file="cambrian/models/agents/agent.xml" />
+              <asset>
+                <material name="adversary0_mat" emission="1" rgba="0.3 0.6 0.3 1" />
+                <material name="adversary0_direction_mat" emission="1" rgba="0.6 0.3 0.3 1" />
+              </asset>
+              <worldbody>
+                <body name="adversary0_body" pos="0 0 0.2">
+                  <!-- Make the alpha very small so it's almost invisible but still visible to mj_ray -->
+                  <geom name="adversary0_geom" type="sphere" size="0.2" rgba="0.0 0.0 1.0 0.01"
+                    contype="1" friction=".5 .1 .1" density="1000" margin="0.002" condim="1" conaffinity="1" group="2" />
+                  <site name="adversary0_site" pos="0.0 0.0 0.0" material="adversary0_mat"
+                    size="0.2" />
+                  <site name="adversary0_direction_site" group="2" pos="0.3 0.0 0.0"
+                    quat="0.5 0.5 0.5 0.5" type="cylinder" material="adversary0_direction_mat"
+                    rgba="1.0 0.0 0.0 1.0" size="0.05 0.15" />
+
+                  <inertial pos="0 0 0" mass="1" diaginertia="0.1 0.1 0.1" />
+
+                  <joint name="adversary0_joint_x" type="slide" pos="0 0 0" axis="1 0 0" damping="1"
+                    limited="false" />
+                  <joint name="adversary0_joint_y" type="slide" pos="0 0 0" axis="0 1 0" damping="1"
+                    limited="false" />
+                  <joint name="adversary0_joint_yaw" type="hinge" pos="0 0 0" axis="0 0 1" damping="1"
+                    limited="false" />
+                </body>
+              </worldbody>
+              <actuator>
+                <!-- These are just dummy actuators for providing ranges -->
+                <velocity name="adversary0_act_x" joint="adversary0_joint_x" ctrlrange="-10.0 10.0"
+                  ctrllimited="true" kv="100" />
+                <velocity name="adversary0_act_y" joint="adversary0_joint_y" ctrlrange="-10.0 10.0"
+                  ctrllimited="true" kv="100" />
+                <position name="adversary0_act_yaw" joint="adversary0_joint_yaw" ctrlrange="-3.14 3.14"
+                  ctrllimited="true" gear="1" />
+              </actuator>
+            </mujoco>
+          overrides:
+          - mujoco:
+            - worldbody:
+              - body:
+                - name: adversary0_body
+                - pos: 0 0 0.5
+                - site:
+                  - name: adversary0_site
+                  - size: '0.5'
+                  - euler: 0 90 0
+                - site:
+                  - name: adversary0_top_site
+                  - material: adversary0_top_mat
+                  - pos: 0 0 0.5
+                  - size: '0.2'
+                  - group: '2'
+            - asset:
+              - texture:
+                - name: adversary0_tex
+                - file: object_textures/redblue_vertical_8.png
+                - type: 2d
+              - material:
+                - name: adversary0_mat
+                - texture: adversary0_tex
+                - emission: '2'
+                - rgba: 1 1 1 1
+              - material:
+                - name: adversary0_top_mat
+                - emission: '2'
+                - rgba: 0.8 0.2 0.2 1.0
+        body_name: adversary0_body
+        geom_name: adversary0_geom
+        check_contacts: false
+        init_pos:
+        - null
+        - null
+        - null
+        init_quat:
+        - null
+        - null
+        - null
+        - null
+        perturb_init_pos: true
+        use_action_obs: false
+        use_contact_obs: false
+        eyes: {}
+    mazes:
+      maze:
+        config: null
+        custom: {}
+        xml:
+          _target_: cambrian.utils.cambrian_xml.MjCambrianXML.parse
+          _convert_: all
+          xml_string: |
+            <mujoco name="maze">
+                <asset>
+                    <material name="floor_mat_maze" rgba="0.1 0.1 0.1 1.0" shininess="0.0" specular="0.0" />
+                </asset>
+                <default>
+                    <default class="maze_wall_maze">
+                        <geom type="box" gap="0.05" margin="0.1" group="3" condim="1" />
+                    </default>
+                </default>
+                <worldbody>
+                    <geom name="floor_maze" type="plane" pos="0 0 -0.05" size="0 0 0" material="floor_mat_maze"
+                        condim="1" group="1" />
+                </worldbody>
+            </mujoco>
+        map: |-
+          [
+            [1, 1,   1,   1,   1,   1,   1, 1, 1],
+            [1, 0,   R,   R,   R,   R,   R, 0, 1],
+            [1, R,   0,   0,   0,   0,   0, R, 1],
+            [1, R, R:O, R:O, R:O, R:O, R:O, R, 1],
+            [1, R, R:O, R:O,   R, R:O, R:O, R, 1],
+            [1, R, R:O, R:O, R:O, R:O, R:O, R, 1],
+            [1, R, R:O, R:O,   R, R:O, R:O, R, 1],
+            [1, R, R:O, R:O, R:O, R:O, R:O, R, 1],
+            [1, R,   0,   0,   0,   0,   0, R, 1],
+            [1, 0,   R,   R,   R,   R,   R, 0, 1],
+            [1, 1,   1,   1,   1,   1,   1, 1, 1],
+          ]
+        scale: 2.0
+        height: 0.5
+        hflip: false
+        vflip: false
+        rotation: 0.0
+        wall_texture_map:
+          default:
+          - vertical_10
+        agent_id_map:
+          default:
+          - agent
+          O:
+          - goal0
+          - adversary0
+        enabled: true
+    maze_selection_fn:
+      _target_: cambrian.envs.maze_env.MjCambrianMazeStore.select_maze_cycle
+      _partial_: true
+  n_eval_episodes: 6
+  save_filename: eval
+  step_fn:
+    respawn_objects_if_agent_close:
+      _target_: cambrian.envs.step_fns.step_respawn_agents_if_close_to_agents
+      _partial_: true
+      for_agents:
+      - goal0
+      - adversary0
+      to_agents:
+      - agent
+      distance_threshold: 1.0
+  reward_fn:
+    reward_if_goal_respawned:
+      _target_: cambrian.envs.reward_fns.reward_fn_agent_respawned
+      _partial_: true
+      reward: 10.0
+      for_agents:
+      - goal0
+      scale_by_quickness: true
+    penalize_if_adversary_respawned:
+      _target_: cambrian.envs.reward_fns.reward_fn_agent_respawned
+      _partial_: true
+      reward: -20.0
+      for_agents:
+      - adversary0
+      scale_by_quickness: true
+    penalize_if_has_contacts:
+      reward: -2.0
+  truncation_fn:
+    truncate_if_close_to_adversary:
+      disable: true
+  termination_fn:
+    terminate_if_close_to_goal:
+      disable: true

@@ -1,0 +1,117 @@
+<mujoco model="MuJoCo Model">
+  <compiler angle="radian" meshdir="cambrian/models/assets/" texturedir="cambrian/models/assets/"/>
+
+  <option timestep="0.02" integrator="implicitfast">
+    <flag frictionloss="disable"/>
+  </option>
+
+  <visual>
+    <quality offsamples="0"/>
+    <headlight active="0"/>
+    <map znear="0.0001" zfar="3"/>
+    <scale frustum="20"/>
+  </visual>
+
+  <default>
+    <default class="maze_wall_maze">
+      <geom type="box" condim="1" group="3" margin="0.1" gap="0.05"/>
+    </default>
+  </default>
+
+  <asset>
+    <texture type="cube" name="wall_maze_default_vertical_10_tex" file="maze_textures/vertical_10.png" gridsize="3 4" gridlayout=".U..LFRB.D.."/>
+    <texture type="2d" name="goal0_tex" file="object_textures/redblue_vertical_8.png"/>
+    <texture type="2d" name="adversary0_tex" file="object_textures/redblue_vertical_8.png"/>
+    <material name="floor_mat_maze" specular="0" shininess="0" rgba="0.1 0.1 0.1 1"/>
+    <material name="wall_maze_default_vertical_10_mat" texture="wall_maze_default_vertical_10_tex"/>
+    <material name="agent_mat" emission="1" rgba="0.3 0.6 0.3 1"/>
+    <material name="agent_direction_mat" emission="1" rgba="0.6 0.3 0.3 1"/>
+    <material name="goal0_mat" texture="goal0_tex" emission="2"/>
+    <material name="goal0_direction_mat" emission="1" rgba="0.6 0.3 0.3 1"/>
+    <material name="goal0_top_mat" emission="2" rgba="0.2 0.8 0.2 1"/>
+    <material name="adversary0_mat" texture="adversary0_tex" emission="2"/>
+    <material name="adversary0_direction_mat" emission="1" rgba="0.6 0.3 0.3 1"/>
+    <material name="adversary0_top_mat" emission="2" rgba="0.8 0.2 0.2 1"/>
+  </asset>
+
+  <worldbody>
+    <geom name="floor_maze" size="9 11 0.1" pos="-9 0 -0.05" type="plane" condim="1" group="1" material="floor_mat_maze"/>
+    <geom name="wall_maze_0" class="maze_wall_maze" size="1 1 0.5" pos="-17 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_1" class="maze_wall_maze" size="1 1 0.5" pos="-15 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_2" class="maze_wall_maze" size="1 1 0.5" pos="-13 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_3" class="maze_wall_maze" size="1 1 0.5" pos="-11 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_4" class="maze_wall_maze" size="1 1 0.5" pos="-9 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_5" class="maze_wall_maze" size="1 1 0.5" pos="-7 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_6" class="maze_wall_maze" size="1 1 0.5" pos="-5 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_7" class="maze_wall_maze" size="1 1 0.5" pos="-3 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_8" class="maze_wall_maze" size="1 1 0.5" pos="-1 10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_9" class="maze_wall_maze" size="1 1 0.5" pos="-17 8 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_10" class="maze_wall_maze" size="1 1 0.5" pos="-1 8 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_11" class="maze_wall_maze" size="1 1 0.5" pos="-17 6 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_12" class="maze_wall_maze" size="1 1 0.5" pos="-1 6 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_13" class="maze_wall_maze" size="1 1 0.5" pos="-17 4 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_14" class="maze_wall_maze" size="1 1 0.5" pos="-1 4 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_15" class="maze_wall_maze" size="1 1 0.5" pos="-17 2 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_16" class="maze_wall_maze" size="1 1 0.5" pos="-1 2 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_17" class="maze_wall_maze" size="1 1 0.5" pos="-17 0 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_18" class="maze_wall_maze" size="1 1 0.5" pos="-1 0 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_19" class="maze_wall_maze" size="1 1 0.5" pos="-17 -2 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_20" class="maze_wall_maze" size="1 1 0.5" pos="-1 -2 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_21" class="maze_wall_maze" size="1 1 0.5" pos="-17 -4 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_22" class="maze_wall_maze" size="1 1 0.5" pos="-1 -4 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_23" class="maze_wall_maze" size="1 1 0.5" pos="-17 -6 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_24" class="maze_wall_maze" size="1 1 0.5" pos="-1 -6 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_25" class="maze_wall_maze" size="1 1 0.5" pos="-17 -8 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_26" class="maze_wall_maze" size="1 1 0.5" pos="-1 -8 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_27" class="maze_wall_maze" size="1 1 0.5" pos="-17 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_28" class="maze_wall_maze" size="1 1 0.5" pos="-15 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_29" class="maze_wall_maze" size="1 1 0.5" pos="-13 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_30" class="maze_wall_maze" size="1 1 0.5" pos="-11 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_31" class="maze_wall_maze" size="1 1 0.5" pos="-9 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_32" class="maze_wall_maze" size="1 1 0.5" pos="-7 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_33" class="maze_wall_maze" size="1 1 0.5" pos="-5 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_34" class="maze_wall_maze" size="1 1 0.5" pos="-3 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <geom name="wall_maze_35" class="maze_wall_maze" size="1 1 0.5" pos="-1 -10 0.5" conaffinity="2" material="wall_maze_default_vertical_10_mat"/>
+    <body name="agent_body" pos="0 0 0.2">
+      <joint name="agent_joint_x" pos="0 0 0" axis="1 0 0" type="slide" limited="false" damping="1"/>
+      <joint name="agent_joint_y" pos="0 0 0" axis="0 1 0" type="slide" limited="false" damping="1"/>
+      <joint name="agent_joint_yaw" pos="0 0 0" axis="0 0 1" limited="false" damping="1"/>
+      <geom name="agent_geom" size="0.2" condim="1" group="2" friction="0.5 0.1 0.1" margin="0.002" rgba="0 0 1 0.01"/>
+      <site name="agent_site" pos="0 0 0" size="0.2" material="agent_mat"/>
+      <site name="agent_direction_site" pos="0.3 0 0" quat="0.5 0.5 0.5 0.5" size="0.05 0.15" group="2" type="cylinder" material="agent_direction_mat" rgba="1 0 0 1"/>
+      <camera name="agent_eye" pos="0.2 8.74228e-09 0" quat="-0.5 -0.5 0.5 0.5" sensorsize="0.00828427 0.00828427" focal="0.01 0.01"/>
+      <camera name="agent_eye_0_0" pos="0.193185 -0.0517638 0" quat="-0.430459 -0.430459 0.560986 0.560986" resolution="32 32" sensorsize="0.00828427 0.00828427" focal="0.01 0.01"/>
+      <camera name="agent_eye_0_1" pos="0.193185 0.0517638 0" quat="-0.560986 -0.560986 0.430459 0.430459" resolution="32 32" sensorsize="0.00828427 0.00828427" focal="0.01 0.01"/>
+    </body>
+    <body name="goal0_body" pos="0 0 0.2">
+      <joint name="goal0_joint_x" pos="0 0 0" axis="1 0 0" type="slide" limited="false" damping="1"/>
+      <joint name="goal0_joint_y" pos="0 0 0" axis="0 1 0" type="slide" limited="false" damping="1"/>
+      <joint name="goal0_joint_yaw" pos="0 0 0" axis="0 0 1" limited="false" damping="1"/>
+      <geom name="goal0_geom" size="0.2" condim="1" group="2" friction="0.5 0.1 0.1" margin="0.002" rgba="0 0 1 0.01"/>
+      <site name="goal0_site" pos="0 0 0" size="0.5" material="goal0_mat"/>
+      <site name="goal0_direction_site" pos="0.3 0 0" quat="0.5 0.5 0.5 0.5" size="0.05 0.15" group="2" type="cylinder" material="goal0_direction_mat" rgba="1 0 0 1"/>
+      <site name="goal0_top_site" pos="0 0 0.5" size="0.2" group="2" material="goal0_top_mat"/>
+    </body>
+    <body name="adversary0_body" pos="0 0 0.2">
+      <joint name="adversary0_joint_x" pos="0 0 0" axis="1 0 0" type="slide" limited="false" damping="1"/>
+      <joint name="adversary0_joint_y" pos="0 0 0" axis="0 1 0" type="slide" limited="false" damping="1"/>
+      <joint name="adversary0_joint_yaw" pos="0 0 0" axis="0 0 1" limited="false" damping="1"/>
+      <geom name="adversary0_geom" size="0.2" condim="1" group="2" friction="0.5 0.1 0.1" margin="0.002" rgba="0 0 1 0.01"/>
+      <site name="adversary0_site" pos="0 0 0" quat="0.707107 0 0.707107 0" size="0.5" material="adversary0_mat"/>
+      <site name="adversary0_direction_site" pos="0.3 0 0" quat="0.5 0.5 0.5 0.5" size="0.05 0.15" group="2" type="cylinder" material="adversary0_direction_mat" rgba="1 0 0 1"/>
+      <site name="adversary0_top_site" pos="0 0 0.5" size="0.2" group="2" material="adversary0_top_mat"/>
+    </body>
+  </worldbody>
+
+  <actuator>
+    <general name="agent_act_x" joint="agent_joint_x" ctrllimited="true" ctrlrange="-10 10" biastype="affine" gainprm="100" biasprm="0 0 -100"/>
+    <general name="agent_act_y" joint="agent_joint_y" ctrllimited="true" ctrlrange="-10 10" biastype="affine" gainprm="100" biasprm="0 0 -100"/>
+    <general name="agent_act_yaw" joint="agent_joint_yaw" ctrllimited="true" ctrlrange="-3.14 3.14" biastype="affine" biasprm="0 -1"/>
+    <general name="goal0_act_x" joint="goal0_joint_x" ctrllimited="true" ctrlrange="-10 10" biastype="affine" gainprm="100" biasprm="0 0 -100"/>
+    <general name="goal0_act_y" joint="goal0_joint_y" ctrllimited="true" ctrlrange="-10 10" biastype="affine" gainprm="100" biasprm="0 0 -100"/>
+    <general name="goal0_act_yaw" joint="goal0_joint_yaw" ctrllimited="true" ctrlrange="-3.14 3.14" biastype="affine" biasprm="0 -1"/>
+    <general name="adversary0_act_x" joint="adversary0_joint_x" ctrllimited="true" ctrlrange="-10 10" biastype="affine" gainprm="100" biasprm="0 0 -100"/>
+    <general name="adversary0_act_y" joint="adversary0_joint_y" ctrllimited="true" ctrlrange="-10 10" biastype="affine" gainprm="100" biasprm="0 0 -100"/>
+    <general name="adversary0_act_yaw" joint="adversary0_joint_yaw" ctrllimited="true" ctrlrange="-3.14 3.14" biastype="affine" biasprm="0 -1"/>
+  </actuator>
+</mujoco>

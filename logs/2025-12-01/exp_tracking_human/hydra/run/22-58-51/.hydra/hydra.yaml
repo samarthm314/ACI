@@ -1,0 +1,233 @@
+hydra:
+  run:
+    dir: ${path:${expdir},hydra,run,${now:%H-%M-%S}}
+  sweep:
+    dir: ${logdir}
+    subdir: ${path:${expsubdir},hydra,sweep,${now:%H-%M-%S}}
+  launcher:
+    submitit_folder: ${hydra.sweep.dir}/.submitit/%j
+    timeout_min: ${eval:'60*24'}
+    cpus_per_task: null
+    gpus_per_node: null
+    tasks_per_node: 1
+    mem_gb: null
+    nodes: 1
+    name: ${hydra.job.name}
+    stderr_to_stdout: false
+    _target_: hydra_plugins.hydra_submitit_launcher.submitit_launcher.LocalLauncher
+  sweeper:
+    _target_: hydra._internal.core_plugins.basic_sweeper.BasicSweeper
+    max_batch_size: null
+    params: null
+  help:
+    app_name: ${hydra.job.name}
+    header: '${hydra.help.app_name} is powered by Hydra.
+
+      '
+    footer: 'Powered by Hydra (https://hydra.cc)
+
+      Use --hydra-help to view Hydra specific help
+
+      '
+    template: '${hydra.help.header}
+
+      == Configuration groups ==
+
+      Compose your configuration from those groups (group=option)
+
+
+      $APP_CONFIG_GROUPS
+
+
+      == Config ==
+
+      Override anything in the config (foo.bar=value)
+
+
+      $CONFIG
+
+
+      ${hydra.help.footer}
+
+      '
+  hydra_help:
+    template: 'Hydra (${hydra.runtime.version})
+
+      See https://hydra.cc for more info.
+
+
+      == Flags ==
+
+      $FLAGS_HELP
+
+
+      == Configuration groups ==
+
+      Compose your configuration from those groups (For example, append hydra/job_logging=disabled
+      to command line)
+
+
+      $HYDRA_CONFIG_GROUPS
+
+
+      Use ''--cfg hydra'' to Show the Hydra config.
+
+      '
+    hydra_help: ???
+  hydra_logging:
+    version: 1
+    formatters:
+      simple:
+        format: '[%(asctime)s][HYDRA] %(message)s'
+    handlers:
+      console:
+        class: logging.StreamHandler
+        formatter: simple
+        stream: ext://sys.stdout
+    root:
+      level: INFO
+      handlers:
+      - console
+    loggers:
+      logging_example:
+        level: DEBUG
+    disable_existing_loggers: false
+  job_logging:
+    version: 1
+    formatters:
+      simple:
+        format: '%(levelname)-8s | %(module)s.%(funcName)s :: %(message)s'
+    filters:
+      once_filter:
+        (): cambrian.utils.logger.MjCambrianOnceFilter
+      max_level:
+        (): cambrian.utils.logger.MjCambrianLoggerMaxLevelFilter
+        max_level: INFO
+    loggers:
+      cambrian:
+        level: DEBUG
+        handlers:
+        - stdout_debug
+        - stderr
+        propagate: false
+    root:
+      level: DEBUG
+      handlers:
+      - stdout_info
+      - stderr
+    disable_existing_loggers: false
+    handlers:
+      stderr:
+        class: cambrian.utils.logger.MjCambrianTqdmStreamHandler
+        formatter: simple
+        stream: ext://sys.stderr
+        level: WARNING
+        filters:
+        - once_filter
+      stdout_debug:
+        class: cambrian.utils.logger.MjCambrianTqdmStreamHandler
+        formatter: simple
+        stream: ext://sys.stdout
+        level: DEBUG
+        filters:
+        - max_level
+      stdout_info:
+        class: cambrian.utils.logger.MjCambrianTqdmStreamHandler
+        formatter: simple
+        stream: ext://sys.stdout
+        level: INFO
+        filters:
+        - max_level
+      file_out:
+        class: cambrian.utils.logger.MjCambrianFileHandler
+        formatter: simple
+        filename: ${expdir}/logs/out.log
+        level: DEBUG
+        mode: w
+      file_err:
+        class: cambrian.utils.logger.MjCambrianFileHandler
+        formatter: simple
+        filename: ${expdir}/logs/err.log
+        level: WARNING
+        mode: w
+        filters:
+        - once_filter
+  env: {}
+  mode: RUN
+  searchpath: []
+  callbacks:
+    log_job_return_callback:
+      _target_: hydra.experimental.callbacks.LogJobReturnCallback
+    save_config_callback:
+      _target_: cambrian.ml.callbacks.MjCambrianSaveConfigCallback
+  output_subdir: .hydra
+  overrides:
+    hydra:
+    - hydra.mode=RUN
+    task:
+    - example=tracking_human
+  job:
+    name: ${expname}
+    chdir: null
+    override_dirname: example=tracking_human
+    id: ???
+    num: ???
+    config_name: base
+    env_set: {}
+    env_copy: []
+    config:
+      override_dirname:
+        kv_sep: '='
+        item_sep: ','
+        exclude_keys: []
+  runtime:
+    version: 1.4.0.dev1
+    version_base: '1.4'
+    cwd: /home/smahapatra/Developer/ACI
+    config_sources:
+    - path: hydra.conf
+      schema: pkg
+      provider: hydra
+    - path: cambrian.configs
+      schema: pkg
+      provider: main
+    - path: ''
+      schema: structured
+      provider: schema
+    output_dir: /home/smahapatra/Developer/ACI/logs/2025-12-01/exp_tracking_human/hydra/run/22-58-51
+    choices:
+      example: tracking_human
+      overlay: null
+      exp: exp
+      exp/mutations: null
+      exp/constraints: null
+      env/renderer: bev
+      task: tracking_human
+      env/agents/eyes@env.agents.agent.eyes.eye: human_eyes
+      env/agents/eyes@env.agents.agent.eyes.eye.single_eye: eye
+      env/agents@env.agents.agent: point
+      env/mazes@env.mazes.maze: OPEN
+      hydra: hydra
+      trainer: trainer
+      trainer/wrappers@trainer.wrappers.constant_action_wrapper: constant_action_wrapper
+      trainer/wrappers@trainer.wrappers.frame_stack_wrapper: frame_stack_wrapper
+      trainer/wrappers@trainer.wrappers.torch_to_numpy_wrapper: torch_to_numpy_wrapper
+      trainer/wrappers@trainer.wrappers.agent_env_wrapper: single_agent_env_wrapper
+      trainer/fitness_fn: eval_monitor
+      trainer/callbacks: callbacks
+      trainer/model: model
+      trainer/model/policy_kwargs: mlp_shared
+      evo/constraints: null
+      evo/mutations: null
+      evo: null
+      env: maze_env
+      hydra/env: default
+      hydra/callbacks: null
+      hydra/job_logging: basic
+      hydra/hydra_logging: default
+      hydra/hydra_help: default
+      hydra/help: default
+      hydra/sweeper: basic
+      hydra/launcher: local
+      hydra/output: default
+  verbose: false

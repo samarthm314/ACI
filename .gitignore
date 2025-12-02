@@ -10,7 +10,6 @@ _version.py
 outputs/
 
 # Data files
-logs/
 *.out
 *.pkl
 *.log
