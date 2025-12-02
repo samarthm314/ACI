@@ -22,7 +22,7 @@ resolution: [64, 64]
 # Set these in single_eye so they propagate to individual eyes via _single_eye workaround
 single_eye:
   # noise_std: Amount of Gaussian noise added to images (0.02 = subtle, 0.1 = very noisy)
-  noise_std: 0.1
+  noise_std: 0.02
 
   # integration_factor: Motion blur/temporal smoothing (0 = none, 0.6 = moderate, 0.9 = heavy)
   # Higher values = more motion blur when moving, encourages fixation
