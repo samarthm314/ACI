@@ -1,0 +1,110 @@
+# @package _global_
+
+# Tracking task with human-like binocular vision
+
+defaults:
+  # Use one maze for the time being
+  - /env/mazes@env.mazes.maze: OPEN
+
+  # Use the maze_task config as the base
+  - maze_task
+
+  # Define one point agent with human-like eyes
+  - /env/agents@env.agents.agent: point
+  - /env/agents/eyes@env.agents.agent.eyes.eye: human_eyes
+
+  # Define two objects: a goal and an adversary that move
+  - /env/agents@env.agents.goal0:
+      - object_sphere_textured_goal
+      - point_textured
+      - point_seeker_random
+  - /env/agents@env.agents.adversary0:
+      - object_sphere_textured_adversary
+      - point_textured
+      - point_seeker_random
+
+custom:
+  frequency: 8
+
+env:
+  mazes:
+    maze:
+      scale: 2.0
+      agent_id_map:
+        default: ${glob:agent*,${oc.dict.keys:env.agents}}
+        O: ${glob:goal*|adversary*,${oc.dict.keys:env.agents}}
+
+  agents:
+    goal0:
+      trainable: false
+      overlay_color: [0.2, 0.8, 0.2, 1]
+    adversary0:
+      trainable: false
+      overlay_color: [0.8, 0.2, 0.2, 1]
+
+  reward_fn:
+    reward_if_done:
+      _target_: cambrian.envs.reward_fns.reward_fn_done
+      _partial_: true
+      scale_by_quickness: true
+      termination_reward: 1.0
+      truncation_reward: ${eval:'-${.termination_reward}'}
+      disable_on_max_episode_steps: true
+      for_agents: ${glob:agent*,${oc.dict.keys:env.agents}}
+
+    penalize_if_has_contacts:
+      _target_: cambrian.envs.reward_fns.reward_fn_has_contacts
+      _partial_: true
+      reward: -1.0
+      for_agents: ${glob:agent*,${oc.dict.keys:env.agents}}
+
+  truncation_fn:
+    truncate_if_close_to_adversary:
+      _target_: cambrian.envs.done_fns.done_if_close_to_agents
+      _partial_: true
+      for_agents: ${glob:agent*,${oc.dict.keys:env.agents}}
+      to_agents: ${glob:adversary*,${oc.dict.keys:env.agents}}
+      distance_threshold: 1.0
+
+  termination_fn:
+    terminate_if_close_to_goal:
+      _target_: cambrian.envs.done_fns.done_if_close_to_agents
+      _partial_: true
+      for_agents: ${glob:agent*,${oc.dict.keys:env.agents}}
+      to_agents: ${glob:goal*,${oc.dict.keys:env.agents}}
+      distance_threshold: 1.0
+
+eval_env:
+  step_fn:
+    respawn_objects_if_agent_close:
+      _target_: cambrian.envs.step_fns.step_respawn_agents_if_close_to_agents
+      _partial_: true
+      for_agents: ${glob:goal*|adversary*,${oc.dict.keys:env.agents}}
+      to_agents: ${glob:agent*,${oc.dict.keys:env.agents}}
+      distance_threshold: 1.0
+
+  reward_fn:
+    reward_if_goal_respawned:
+      _target_: cambrian.envs.reward_fns.reward_fn_agent_respawned
+      _partial_: true
+      reward: 10.0
+      for_agents: ${glob:goal*,${oc.dict.keys:env.agents}}
+      scale_by_quickness: true
+
+    penalize_if_adversary_respawned:
+      _target_: cambrian.envs.reward_fns.reward_fn_agent_respawned
+      _partial_: true
+      reward: -20.0
+      for_agents: ${glob:adversary*,${oc.dict.keys:env.agents}}
+      scale_by_quickness: true
+
+    penalize_if_has_contacts:
+      reward: -2.0
+
+  truncation_fn:
+    truncate_if_close_to_adversary:
+      disable: True
+
+  termination_fn:
+    terminate_if_close_to_goal:
+      disable: True

@@ -25,6 +25,10 @@ _single_eye:
   coord: ${..coord}
   orthographic: ${..orthographic}
 
+  # Sensor realism parameters - propagate to individual eyes
+  noise_std: ${..single_eye.noise_std}
+  integration_factor: ${..single_eye.integration_factor}
+
   renderer:
     width: ${..resolution.1}
     height: ${..resolution.0}

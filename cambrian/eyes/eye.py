@@ -277,21 +277,44 @@ class MjCambrianEye:
         return torch.clamp(obs + noise, 0, 1)
 
     def _integrate_observation(self, obs: ObsType) -> ObsType:
-        """Exponential smoothing that creates motion blur and rewards fixation.
+        """Motion-adaptive temporal integration that promotes fixation.
 
-        The integration factor acts as a base level of denoising for static views.
-        When the eye or scene moves, frame-to-frame differences increase the weight
-        of the previous frame, introducing perceptible motion blur that encourages
-        the agent to stabilize its gaze.
+        The integration factor serves dual purposes:
+
+        1. **Noise reduction during fixation**: When the scene is static (agent fixating),
+           noise from the current frame is averaged with previous frames, gradually
+           producing a cleaner, denoised image. This rewards staying still.
+
+        2. **Motion blur penalty**: When the scene changes (agent moving), old content
+           persists and blends with new content, creating visible motion blur that
+           degrades image quality. This penalizes movement.
+
+        Motion-adaptive behavior:
+        - Low motion (fixating): Uses base integration_factor for noise reduction
+        - High motion (moving): Increases integration to amplify blur penalty
+
+        Parameters to tune:
+        - integration_factor=0.0: No effect (instant update)
+        - integration_factor=0.3-0.5: Subtle denoising + light blur
+        - integration_factor=0.6-0.8: Strong denoising + noticeable blur
+        - integration_factor=0.9+: Heavy denoising + severe blur (strong fixation incentive)
         """
 
         alpha = self._config.integration_factor
+
         if alpha == 0.0 or not self._has_prev_obs:
             return obs
 
+        # Measure frame-to-frame difference (motion detection)
         motion_level = torch.mean(torch.abs(obs - self._prev_obs)).clamp(0.0, 1.0)
-        effective_alpha = torch.clamp(alpha * (0.5 + 0.5 * motion_level), 0.0, 1.0)
 
+        # Motion-adaptive blending:
+        # - Static (low motion): Use base alpha for noise reduction
+        # - Moving (high motion): Increase alpha to amplify motion blur penalty
+        # The multiplier (1.0 + motion_level) increases integration during motion
+        effective_alpha = torch.clamp(alpha * (1.0 + 0.5 * motion_level), 0.0, 1.0)
+
+        # Exponential moving average: more previous frame retention = more blur/smoothing
         return (effective_alpha * self._prev_obs) + ((1 - effective_alpha) * obs)
 
     def render(self) -> List[MjCambrianViewerOverlay]:

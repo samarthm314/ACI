@@ -1,0 +1,22 @@
+# @package _global_
+
+# Example config for tracking task with human-like binocular vision
+# Use this to quickly test different noise and integration factor settings
+
+defaults:
+  - example
+  - override /task: tracking_human
+
+env:
+  agents:
+    agent:
+      eyes:
+        eye:
+          # Lower resolution for faster training/evaluation
+          resolution: [32, 32]
+
+          # Explicitly set sensor realism parameters
+          # These values come from human_eyes.yaml but are set explicitly here
+          # so they don't get lost during config composition
+          noise_std: 0
+          integration_factor: 0.3
