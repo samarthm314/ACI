@@ -1,0 +1,29 @@
+# Human-like binocular vision configuration
+# Two forward-facing eyes positioned side-by-side
+
+defaults:
+  - multi_eye
+
+# Two eyes positioned horizontally (side-by-side)
+num_eyes: [1, 2]  # 1 latitude row, 2 longitude positions = 2 eyes
+
+# Position eyes forward-facing, separated horizontally
+lat_range: [0, 0]      # Both at same vertical position (forward)
+lon_range: [-15, 15]   # Spread 30 degrees apart horizontally (15° left, 15° right)
+
+# Human-like field of view
+# Horizontal FOV ~120°, Vertical FOV ~90°
+fov: [90, 120]
+
+# Typical resolution for vision experiments
+resolution: [64, 64]
+
+# Sensor realism parameters (moderate values for realistic vision)
+# Set these in single_eye so they propagate to individual eyes via _single_eye workaround
+single_eye:
+  # noise_std: Amount of Gaussian noise added to images (0.02 = subtle, 0.1 = very noisy)
+  noise_std: 0.1
+
+  # integration_factor: Motion blur/temporal smoothing (0 = none, 0.6 = moderate, 0.9 = heavy)
+  # Higher values = more motion blur when moving, encourages fixation
+  integration_factor: 0.6
