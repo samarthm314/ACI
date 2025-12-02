@@ -25,3 +25,9 @@ env:
     adversary0:
       trainable: false
       overlay_color: [0.8, 0.2, 0.2, 1]
+    agent:
+      eyes:
+        eye:
+          # Inject sensor noise and add temporal integration to encourage fixation
+          noise_std: 0.02
+          integration_factor: 0.6

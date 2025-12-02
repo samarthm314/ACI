@@ -46,6 +46,13 @@ class MjCambrianEyeConfig(HydraContainerConfig):
             on. Fmt: lat lon
         orthographic (bool): Whether the camera is orthographic
 
+        noise_std (float): Standard deviation of the Gaussian noise to be added to
+            the rendered image. If 0, no noise is applied.
+        integration_factor (float): Factor in [0, 1] controlling exponential
+            smoothing of the eye observation. Higher values retain more of the
+            previous observation, which suppresses noise, adds motion blur during
+            movement, and encourages fixation.
+
         renderer (MjCambrianRendererConfig): The renderer config to use for the
             underlying renderer.
     """
@@ -58,6 +65,9 @@ class MjCambrianEyeConfig(HydraContainerConfig):
     resolution: Tuple[int, int]
     coord: Tuple[float, float]
     orthographic: bool
+
+    noise_std: float
+    integration_factor: float
 
     renderer: MjCambrianRendererConfig
 
@@ -94,6 +104,8 @@ class MjCambrianEye:
         self._prev_obs: torch.Tensor = None
         self._fixedcamid = -1
         self._spec: MjCambrianSpec = None
+
+        self._has_prev_obs = False
 
         self._renderer: MjCambrianRenderer = None
         if not disable_render:
@@ -213,6 +225,7 @@ class MjCambrianEye:
             dtype=torch.float32,
             device=device,
         )
+        self._has_prev_obs = False
 
         obs = self.step()
         if obs.device != self._prev_obs.device:
@@ -242,12 +255,44 @@ class MjCambrianEye:
                 )
                 obs = obs[0]
 
+        obs = self._apply_sensor_noise(obs)
+        obs = self._integrate_observation(obs)
+
         return self._update_obs(obs)
 
     def _update_obs(self, obs: ObsType) -> ObsType:
         """Update the observation space."""
         self._prev_obs.copy_(obs, non_blocking=True)
+        self._has_prev_obs = True
         return self._prev_obs
+
+    def _apply_sensor_noise(self, obs: ObsType) -> ObsType:
+        """Add Gaussian noise to the observation if configured."""
+
+        std = self._config.noise_std
+        if std == 0.0:
+            return obs
+
+        noise = torch.normal(mean=0.0, std=std, size=obs.shape, device=obs.device)
+        return torch.clamp(obs + noise, 0, 1)
+
+    def _integrate_observation(self, obs: ObsType) -> ObsType:
+        """Exponential smoothing that creates motion blur and rewards fixation.
+
+        The integration factor acts as a base level of denoising for static views.
+        When the eye or scene moves, frame-to-frame differences increase the weight
+        of the previous frame, introducing perceptible motion blur that encourages
+        the agent to stabilize its gaze.
+        """
+
+        alpha = self._config.integration_factor
+        if alpha == 0.0 or not self._has_prev_obs:
+            return obs
+
+        motion_level = torch.mean(torch.abs(obs - self._prev_obs)).clamp(0.0, 1.0)
+        effective_alpha = torch.clamp(alpha * (0.5 + 0.5 * motion_level), 0.0, 1.0)
+
+        return (effective_alpha * self._prev_obs) + ((1 - effective_alpha) * obs)
 
     def render(self) -> List[MjCambrianViewerOverlay]:
         """Render the image from the camera. Will always only return the rgb array.
